@@ -1,0 +1,231 @@
+﻿@using ToDoList.Data.Calendar
+@inject ToDoList.Data.Repository.IRepository repository;
+@inject ToDoList.Data.Repository.ICalendarRepository calendarRepository;
+
+
+@page "/todo"
+<style type = "text/css">
+    #tblParent tbody tr td {
+        width: 200px;
+        height: 200px;
+    }
+
+    #divParent {
+        position: relative;
+    }
+
+    #divModal {
+        z-index: 10;
+        position: absolute;
+        border; 1px solid #000000;
+        border-radius: 3px;
+        background-color: #ffffff;
+        left: 40%;
+        top: 20%;
+        width: 400px;
+        min-height: 300px;
+    }
+
+    .modalHeading {
+        text-align: center;
+        font-size: 50px;
+        text-decoration: underline;
+        margin-bottom: 36px;
+    }
+</style>
+
+
+
+<div class = "container-fluid">
+    <div class = "row">
+        <div class = "col">
+            <h2 class = "text-center">Todo @todos.Count(item => !item.IsDone)</h2>
+            <table class = "table table-striped">
+                <thead class = "table-dark">
+                    <tr>
+                        <th scope = "col">Title</th>                        
+                        <th scope = "col">Date</th>
+                        <th scope = "col">Is Done</th>
+                        <th scope = "col"></th>
+                        <th scope = "col"></th>
+                        
+
+                    </tr>
+
+                </thead>
+                @foreach (var item in todos)
+                {
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div style = "@(item.IsDone ? "color: green; text-decoration: line-through;" : "color: black")">
+                                    @item.Title
+                                </div>
+                            </td>                           
+                            <td>
+                                <!-- Set To Date here -->
+                                
+                                     <div style = "@(item.IsDone ? "color: green; text-decoration: line-through;" : "color: black")">
+                                  @if (item.EventDate == DateTime.MinValue)
+                                    {
+                                        
+                                    }
+                                    else
+                                    {
+                                    @item.EventDate.ToString("dd-MMM-yyyy")
+
+                                    }
+                                        
+                                    
+                                </div>
+                                    
+                                
+                                <!-- Set To Date here -->
+                            </td>
+                            <td>
+                                @if (!item.IsDone)
+                                {
+
+
+                                    <input type = "checkbox" value = "item.IsDone" @onchange = "(() => StatusChanger(item))"/>
+                                }
+                                else
+                                {
+                                    <input type = "checkbox" checked value = "item.IsDone" @onchange = "(() => StatusChanger(item))"/>
+                                }
+                            </td>
+                            <td>                 
+                                <button class = "btn btn-secondary" @onclick= "(() => OpenModal(item.Id))">Add date</button>                     
+                            </td>
+
+                            <td>
+                                <button class = "btn btn-danger" @onclick= "(() => DeleteTodo(item.Id))">Delete</button>
+                            </td>
+
+                        </tr>
+                    </tbody>
+                }
+
+            </table>
+
+            <div class = "row">
+                <div class = "col">
+                    <input class = "form-control" placeholder = "Type something todo" @bind = "newTodo"/>
+                </div>
+                <div class = "col">
+                    <button class = "btn btn-success" @onclick = "AddTodo">Add todo</button>
+                
+                    <button class = "btn btn-info " @onclick = "CloseModal">Save file</button>
+                
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+@if (displayModal)
+{
+    @foreach (var date in todos)
+    {
+        <div id = "divModal">
+            <div class = "container">
+                <div class = "panel panel-primary">
+                    <div class = "panel-heading modalHeading">Set  Date</div>
+                    <div class = "panel-body">
+                        <div class = "row">
+                            <div class = "col-md-4">
+                                <label>Date : </label>
+                            </div>
+                            <div class = "col-md-8">
+                                <input type = "date" @bind-value = "@dayEvent" style = "width : 100%;"/>
+                                <p>Set day event on: @dayEvent.ToString("dd-MMM-yyyy")</p>
+                                 
+                            </div>
+                        </div>
+                    </div>
+                    <div class = "row">
+                        <div class = "col-md-4">
+                            <label></label>
+                        </div>
+                        <div>
+                        </div>
+                    </div>
+                    <div class = "row" style = "margin-bottom: 10px;">
+                        <div class = "col-md-6">
+                        </div>
+                        <div class = "col-md-6" style = "text-align : right;">
+                             <button class = "btn btn-success" @onclick = "(() => SaveDate(date))" style = "float : left; margin-right : 5px;">Save</button> 
+                        <button class = "btn btn-danger" @onclick = "CloseModal" style = "float : left;">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+
+@code {
+    
+    bool displayModal = false;
+    protected override void OnInitialized()
+    {
+        todos = repository.GetAllItems();       
+    }
+
+
+
+
+    //THATS TO DO LIST
+    private IEnumerable<TodoItem> todos = new List<TodoItem>();
+
+    private string newTodo;
+
+    private void AddTodo()
+    {
+        if (!string.IsNullOrWhiteSpace(newTodo))
+        {
+            //todos.Add(new TodoItem { Title = newTodo });
+            repository.AddTodo(newTodo);
+            newTodo = string.Empty;
+        }
+
+    }
+    private DateTime dayEvent = DateTime.Now;
+    private void SaveDate(TodoItem newEvent)
+    {
+        
+        newEvent.EventDate = dayEvent;
+        repository.SaveOrUpdate(newEvent);
+        displayModal = false;
+        
+    }
+
+    private void DeleteTodo(int id)
+    {
+        // todos.Remove(deletedItem);
+        repository.DeleteItem(id);
+    }
+
+    private void StatusChanger(TodoItem changedItem)
+    {
+        changedItem.IsDone = !changedItem.IsDone;
+        repository.ValueChanged(changedItem);
+
+    }
+
+    private void OpenModal(int id)
+        {
+            displayModal = true;
+        }
+    private void CloseModal()
+        {
+            displayModal = false;
+        }
+    
+
+        
+       
+}
